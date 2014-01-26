@@ -24,6 +24,7 @@ local.properties
 app/src/main/libs/
 app/build/
 app/production/
+.gradle/
 .idea/
 /*/local.properties
 /*/out
