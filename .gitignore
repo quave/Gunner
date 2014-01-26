@@ -22,10 +22,11 @@ local.properties
 
 # Android Studio
 app/src/main/libs/
+app/build/
+app/production/
 .idea/
 /*/local.properties
 /*/out
-/*/*/build
 /*/*/production
 *.iws
 *.ipr
