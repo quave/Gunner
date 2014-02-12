@@ -22,23 +22,24 @@
 #include "util.cpp"
 
 extern "C" {
-    JNIEXPORT void JNICALL Java_com_android_gl2jni_GL2JNILib_init(JNIEnv * env, jobject obj,  jint width, jint height);
-    JNIEXPORT void JNICALL Java_com_android_gl2jni_GL2JNILib_step(JNIEnv * env, jobject obj);
+    JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_init(JNIEnv * env, jobject obj,  jint width, jint height);
+    JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_step(JNIEnv * env, jobject obj);
 };
 
 Game game;
 
-JNIEXPORT void JNICALL Java_com_android_gl2jni_GL2JNILib_init(JNIEnv * env, jobject obj,  jint width, jint height)
+JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_init(JNIEnv * env, jobject obj,  jint width, jint height)
 {
     game.init((int)width, (int)height);
 }
 
-JNIEXPORT void JNICALL Java_com_android_gl2jni_GL2JNILib_step(JNIEnv * env, jobject obj)
+JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_step(JNIEnv * env, jobject obj)
 {
     static struct timespec time;
     struct timespec newTime;
     clock_gettime(CLOCK_REALTIME, &newTime);
     double dt = (newTime.tv_nsec - time.tv_nsec) / 1000000000.0;
+    if (dt < 0) { dt += 1; }
     time = newTime;
 
     game.work(dt);

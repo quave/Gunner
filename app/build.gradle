@@ -9,7 +9,7 @@ android {
         targetSdkVersion 10
 
         ndk {
-            moduleName "libgl2jni"
+            moduleName "libgunner"
         }
     }
 
