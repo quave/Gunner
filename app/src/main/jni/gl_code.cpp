@@ -22,15 +22,27 @@
 #include "util.cpp"
 
 extern "C" {
-    JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_init(JNIEnv * env, jobject obj,  jint width, jint height);
+    JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_init(JNIEnv * env, jobject obj, jint width, jint height);
     JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_step(JNIEnv * env, jobject obj);
+    JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_pause(JNIEnv * env, jobject obj);
+    JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_resume(JNIEnv * env, jobject obj);
 };
 
 Game game;
 
-JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_init(JNIEnv * env, jobject obj,  jint width, jint height)
+JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_init(JNIEnv * env, jobject obj, jint width, jint height)
 {
     game.init((int)width, (int)height);
+}
+
+JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_pause(JNIEnv * env, jobject obj)
+{
+    game.pause();
+}
+
+JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_resume(JNIEnv * env, jobject obj)
+{
+    game.resume();
 }
 
 JNIEXPORT void JNICALL Java_com_android_gunner_GunnerLib_step(JNIEnv * env, jobject obj)

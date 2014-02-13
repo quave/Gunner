@@ -75,6 +75,18 @@ class GunnerView extends GLSurfaceView {
         init(translucent, depth, stencil);
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        GunnerLib.resume();
+    }
+
+    @Override
+    public void onPause() {
+        super.onResume();
+        GunnerLib.pause();
+    }
+
     private void init(boolean translucent, int depth, int stencil) {
 
         /* By default, GLSurfaceView() creates a RGB_565 opaque surface.
@@ -330,7 +342,7 @@ class GunnerView extends GLSurfaceView {
         }
 
         public void onSurfaceCreated(GL10 gl, EGLConfig config) {
-            // Do nothing.
+            // Do nothing
         }
     }
 }

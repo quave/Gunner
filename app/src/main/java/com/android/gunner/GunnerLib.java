@@ -20,14 +20,17 @@ package com.android.gunner;
 
 public class GunnerLib {
 
-     static {
-         System.loadLibrary("gunner");
-     }
+    static {
+     System.loadLibrary("gunner");
+    }
 
     /**
      * @param width the current view width
      * @param height the current view height
      */
-     public static native void init(int width, int height);
-     public static native void step();
+    public static native void init(int width, int height);
+    public static native void step();
+    public static native void pause();
+    public static native void resume();
+
 }

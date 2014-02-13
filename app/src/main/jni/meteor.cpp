@@ -4,31 +4,30 @@
 #include <GLES2/gl2.h>
 #include <math.h>
 #include <vecmath.h>
+
 #include "node.cpp"
 
 using namespace ndk_helper;
 
 class Meteor: public Node {
 
+    void generate();
+
 public:
     ~Meteor();
     void init(int width, int height);
     NodeType getType() { return METEOR; };
+    bool isOut();
 };
 
 void Meteor::init(int width, int height) {
     LOGI("Init meteor");
 
     vertexCount_ = rand() % 6 + 4;
-    LOGI ("Meteor vertex count = %d", vertexCount_);
+    //LOGI ("Meteor vertex count = %d", vertexCount_);
 
     vertices_ = new GLfloat[vertexCount_ * DIMENTIONS];
-    for(int i = 0; i < vertexCount_ * DIMENTIONS; i+=DIMENTIONS ) {
-        float r = (float)rand() / RAND_MAX;
-        float a = (i / DIMENTIONS) * (2 * M_PI) / vertexCount_;
-        vertices_[i] = r * cos(a);
-        vertices_[i + 1] = r * sin(a);
-    }
+    generate();
 
     colors_ = new GLfloat[vertexCount_ * COLOR_COMPONENTS];
     for(int i = 0; i < vertexCount_ * COLOR_COMPONENTS; i+=COLOR_COMPONENTS ) {
@@ -44,11 +43,70 @@ void Meteor::init(int width, int height) {
     Node::init(width, height);
 }
 
+void Meteor::generate() {
+    if (vertices_ == NULL || vertexCount_ < 4) {
+        return;
+    }
+
+    // Generate first point
+    float r1 = (float)rand() / RAND_MAX / 2 + 0.5f;
+    float a1 = 0;
+    float x1 = vertices_[0] = r1;
+    float y1 = vertices_[1] = 0;
+    float x01 = x1;
+    float y01 = y1;
+    //LOGI("x01=%1.4f, y01=%1.4f", x01, y01);
+
+    // Generate second point
+    float r2 = (float)rand() / RAND_MAX / 2 + 0.5f;
+    float a2 = (2 * M_PI) / vertexCount_;
+    float x2 = vertices_[2] = r2 * cos(a2);
+    float y2 = vertices_[3] = r2 * sin(a2);
+    float x02 = x2;
+    float y02 = y2;
+    //LOGI("x02=%1.4f, y02=%1.4f", x02, y02);
+
+    for(int i = 2; i < vertexCount_ - 1; ++i) {
+        float a0 = i * (2 * M_PI) / vertexCount_;
+        float x0 = cos(a0);
+        float y0 = sin(a0);
+
+        float rmax = (y1*x2 - x1*y2) / (y0*(x2-x1) + x0*(y1-y2));
+        rmax = fmin(1.0f, rmax);
+        float rmin = rmax / 2;
+
+        float r = (float)rand() / RAND_MAX * (rmax - rmin) + rmin;
+        float x = vertices_[i * 2] = r * x0;
+        float y = vertices_[i * 2 + 1] = r * y0;
+        //LOGI("i=%d, rmax=%1.4f, x=%1.4f, y=%1.4f", i, rmax, x, y);
+
+        x1 = x2;
+        y1 = y2;
+        x2 = x;
+        y2 = y;
+    }
+
+    float a0 = (vertexCount_ - 1) * (2 * M_PI) / vertexCount_;
+    float x0 = cos(a0);
+    float y0 = sin(a0);
+    float rmax1 = (y1*x2 - x1*y2) / (y0*(x2-x1) + x0*(y1-y2));
+    float rmax2 = (y01*x02 - x01*y02) / (y0*(x02-x01) + x0*(y01-y02));
+    float rmax = fmin(rmax1, rmax2);
+    rmax = fmin(1.0f, rmax);
+    float rmin = (y1*x01 - x1*y01) / (y0*(x01-x1) + x0*(y1-y01));
+    //LOGI("rmax1=%1.4f, rmax2=%1.4f, rmin=%1.4f", rmax1, rmax2, rmin);
+    float r = (float)rand() / RAND_MAX * (rmax - rmin) + rmin;
+    vertices_[(vertexCount_ - 1) * 2] = r * x0;
+    vertices_[(vertexCount_ - 1) * 2 + 1] = r * y0;
+}
+
 Meteor::~Meteor() {
     if (vertices_ != NULL) { delete [] vertices_; }
     if (colors_ != NULL) { delete [] colors_; }
 }
 
-
+bool Meteor::isOut() {
+    return vertices_ != NULL && vertices_[1] < -1.0f;
+}
 
 #endif

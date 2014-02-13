@@ -43,10 +43,14 @@ class Game {
 
     static const float fallSpeed = 0.2f;
 
+    void updateMeteor(double dt, vector<Node*>::iterator nodeIt);
+
 public:
     Game() { inited_ = false; };
     bool init(int w, int h);
     void work(double dt);
+    void pause();
+    void resume();
 };
 
 const char gVertexShader[] =
@@ -165,7 +169,7 @@ bool Game::init(int w, int h) {
             scene_.push_back(new Meteor());
         }
 
-        for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
+        for (vector<Node*>::const_iterator node = scene_.begin(); node < scene_.end(); ++node) {
             (*node)->init(w, h);
         }
 
@@ -175,8 +179,11 @@ bool Game::init(int w, int h) {
     return true;
 }
 
+void Game::pause() { LOGI("Game::pause"); }
+void Game::resume() { LOGI("Game::resume"); }
+
 void Game::work(double dt) {
-    LOGI("dt %f", dt);
+
     glClearColor(0.2353f, 0.2471f, 0.2549f, 1.0f);
     checkGlError("glClearColor");
     glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
@@ -191,8 +198,22 @@ void Game::work(double dt) {
         (*node)->draw(dt, gaPositionHandle_, gaColorHandle_);
 
         if ((*node)->getType() == METEOR) {
-            (*node)->translate(0.0f, -(dt * fallSpeed));
+            updateMeteor(dt, node);
         }
+    }
+}
+
+void Game::updateMeteor(double dt, vector<Node*>::iterator nodeIt) {
+    Meteor* meteor = (Meteor*) (*nodeIt);
+    meteor->translate(0.0f, -(dt * fallSpeed));
+
+    if (meteor->isOut()) {
+        scene_.erase(nodeIt);
+        delete meteor;
+
+        Meteor* newMeteor = new Meteor();
+        newMeteor->init(width_, height_);
+        scene_.push_back(newMeteor);
     }
 }
 
