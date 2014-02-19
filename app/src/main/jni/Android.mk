@@ -16,9 +16,9 @@ LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE    := libgunner
+LOCAL_MODULE    := gunner
 LOCAL_CFLAGS    := -Werror
-LOCAL_SRC_FILES :=  gl_code.cpp
+LOCAL_SRC_FILES :=  main.cpp
 LOCAL_LDLIBS    := -llog -landroid -lEGL -lGLESv2
 LOCAL_STATIC_LIBRARIES := cpufeatures android_native_app_glue ndk_helper
 

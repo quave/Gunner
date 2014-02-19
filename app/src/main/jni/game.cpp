@@ -7,6 +7,7 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 #include <JNIHelper.h>
+#include <android/input.h>
 #include <vecmath.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,18 +37,21 @@ class Game {
     Mat4 view_;
     int width_;
     int height_;
+    double time_;
 
-    Shuttle shuttle_;
-    Bullet bullet_;
+    Shuttle* shuttle_;
+    Bullet* bullet_;
     vector<Node*> scene_;
 
     static const float fallSpeed = 0.2f;
 
     void updateMeteor(double dt, vector<Node*>::iterator nodeIt);
+    void updateBullet(double dt, vector<Node*>::iterator nodeIt);
 
 public:
-    Game() { inited_ = false; };
+    Game(int w, int h): inited_(false), time_(0) { init(w, h); };
     bool init(int w, int h);
+    void deInit() {};
     void work(double dt);
     void pause();
     void resume();
@@ -162,15 +166,13 @@ bool Game::init(int w, int h) {
     srand(now.tv_usec);
 
     if (!inited_) {
-        scene_.push_back(&shuttle_);
-        scene_.push_back(&bullet_);
+        shuttle_ = new Shuttle(width_, height_);
+        bullet_ = new Bullet(width_, height_);
+        scene_.push_back(shuttle_);
+        scene_.push_back(bullet_);
 
         for (int i = 0; i < 2; ++i) {
-            scene_.push_back(new Meteor());
-        }
-
-        for (vector<Node*>::const_iterator node = scene_.begin(); node < scene_.end(); ++node) {
-            (*node)->init(w, h);
+            scene_.push_back(new Meteor(width_, height_));
         }
 
         inited_ = true;
@@ -183,6 +185,7 @@ void Game::pause() { LOGI("Game::pause"); }
 void Game::resume() { LOGI("Game::resume"); }
 
 void Game::work(double dt) {
+    time_ += dt;
 
     glClearColor(0.2353f, 0.2471f, 0.2549f, 1.0f);
     checkGlError("glClearColor");
@@ -194,11 +197,20 @@ void Game::work(double dt) {
 
     glLineWidth(2.0f);
 
+    double secs;
+    if (modf(time_, &secs) <= dt) {
+        LOGI("second1");
+    }
+
     for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
         (*node)->draw(dt, gaPositionHandle_, gaColorHandle_);
 
         if ((*node)->getType() == METEOR) {
             updateMeteor(dt, node);
+        }
+
+        if ((*node)->getType() == BULLET) {
+            updateBullet(dt, node);
         }
     }
 }
@@ -206,14 +218,24 @@ void Game::work(double dt) {
 void Game::updateMeteor(double dt, vector<Node*>::iterator nodeIt) {
     Meteor* meteor = (Meteor*) (*nodeIt);
     meteor->translate(0.0f, -(dt * fallSpeed));
+    meteor->rotate(0.1f);
 
     if (meteor->isOut()) {
         scene_.erase(nodeIt);
         delete meteor;
 
-        Meteor* newMeteor = new Meteor();
-        newMeteor->init(width_, height_);
+        Meteor* newMeteor = new Meteor(width_, height_);
         scene_.push_back(newMeteor);
+    }
+}
+
+void Game::updateBullet(double dt, vector<Node*>::iterator nodeIt) {
+    Bullet* bullet = (Bullet*) (*nodeIt);
+    bullet->translate(0.0f, dt * fallSpeed);
+
+    if (bullet->isOut()) {
+        scene_.erase(nodeIt);
+        delete bullet;
     }
 }
 

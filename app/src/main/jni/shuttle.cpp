@@ -12,6 +12,7 @@ class Shuttle: public Node {
 protected:
 
 public:
+    Shuttle(int w, int h): Node(w, h) { };
     ~Shuttle();
     void init(int width, int height);
     NodeType getType() { return SHUTTLE; };

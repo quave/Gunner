@@ -1,11 +1,10 @@
 #ifndef UTIL_CPP
 #define UTIL_CPP
 
+#define LOG_TAG "gunner"
+#include <JNIHelper.h>
 #include <android/log.h>
-
 #include <GLES2/gl2.h>
-
-#define  LOG_TAG    "libgl2jni"
 
 static void printGLString(const char *name, GLenum s) {
     const char *v = (const char *) glGetString(s);

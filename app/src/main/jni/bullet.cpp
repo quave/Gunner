@@ -12,6 +12,7 @@ class Bullet: public Node {
 protected:
 
 public:
+    Bullet(int w, int h): Node(w, h) { };
     ~Bullet();
     void init(int width, int height);
     NodeType getType() { return BULLET; };

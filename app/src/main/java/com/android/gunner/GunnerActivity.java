@@ -16,27 +16,14 @@
 
 package com.android.gunner;
 
-import android.app.Activity;
+import android.app.NativeActivity;
 import android.os.Bundle;
 
 
-public class GunnerActivity extends Activity {
+public class GunnerActivity extends NativeActivity {
 
-    GunnerView mView;
-
-    @Override protected void onCreate(Bundle icicle) {
+    @Override
+    protected void onCreate(Bundle icicle) {
         super.onCreate(icicle);
-        mView = new GunnerView(getApplication());
-	setContentView(mView);
-    }
-
-    @Override protected void onPause() {
-        super.onPause();
-        mView.onPause();
-    }
-
-    @Override protected void onResume() {
-        super.onResume();
-        mView.onResume();
     }
 }

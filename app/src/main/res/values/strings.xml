@@ -23,7 +23,6 @@
 
 <resources>
     <!-- Simple strings. -->
-    <string name="gunner_activity">Gunner</string>
-
+    <string name="app_name">Gunner</string>
 </resources>
 
