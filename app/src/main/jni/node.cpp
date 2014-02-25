@@ -34,8 +34,7 @@ public:
         vertices_(NULL),
         colors_(NULL),
         vertexCount_(0),
-        x_(0.0f), y_(0.0f) { };
-    virtual void init(int width, int height) { LOGI("Node init"); };
+        x_(0.0f), y_(0.0f) {};
     virtual void scale(float, float);
     virtual void translate(float, float);
     virtual void rotate(float);
@@ -43,15 +42,26 @@ public:
     int getVertexCount() {return vertexCount_;};
     virtual NodeType getType() { return NODE; };
     bool isOut();
+    float getX() { return x_; };
+    float getY() { return y_; };
+
+    bool isInside(float x, float y);
 };
 
 void Node::scale(float sx, float sy) {
     if (vertices_ == NULL) { return; }
 
+    float x = x_;
+    float y = y_;
+
+    if (x && y) { translate(-x_, -y_); }
+
     for (int i = 0; i < vertexCount_ * 2; i+=2 ) {
         vertices_[i] *= sx;
         vertices_[i+1] *= sy;
     }
+
+    if (x && y) { translate(x, y); }
 }
 
 void Node::translate(float tx, float ty) {
@@ -78,7 +88,7 @@ void Node::rotate(float angle) {
     float x = x_;
     float y = y_;
 
-    translate(-x_, -y_);
+    if (x && y) { translate(-x_, -y_); }
 
     Mat4 rot = Mat4::RotationZ(angle);
 
@@ -91,7 +101,7 @@ void Node::rotate(float angle) {
         vertices_[i+1] = y;
     }
 
-    translate(x, y);
+    if (x && y) { translate(x, y); }
 }
 
 void Node::draw(double dt, GLuint hPos, GLuint hCol)
@@ -113,9 +123,7 @@ void Node::draw(double dt, GLuint hPos, GLuint hCol)
 }
 
 bool Node::isOut() {
-    if (vertices_ == NULL) {
-        return false;
-    }
+    if (vertices_ == NULL) { return false; }
 
     float xmin = XMAX;
     float xmax = XMIN;
@@ -131,8 +139,26 @@ bool Node::isOut() {
         if (y < ymin) { ymin = y; }
         if (y > ymax) { ymax = y; }
     }
-    //LOGI("xmin=%1.4f, xmax=%1.4f, ymin=%1.4f, ymax=%1.4f", xmin, xmax, ymin, ymax);
+
     return  xmax <= XMIN || xmin >= XMAX || ymax <= YMIN || ymin >= YMAX;
+}
+
+bool Node::isInside(float x, float y) {
+    if (vertices_ == NULL) { return false; }
+
+    bool result = false;
+
+    for (int i = 0, j = vertexCount_ - 1; i < vertexCount_; j = i++) {
+        float curX = vertices_[i * 2], curY = vertices_[i * 2 + 1];
+        float prevX = vertices_[j * 2], prevY = vertices_[j * 2 + 1];
+
+        if ((curY > y) != (prevY > y) &&
+            (x < (prevX - curX) * (y - curY) / (prevY - curY) + curX)) {
+            result = !result;
+        }
+    }
+
+    return result;
 }
 
 #endif

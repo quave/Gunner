@@ -40,21 +40,26 @@ class Game {
     double time_;
 
     Shuttle* shuttle_;
-    Bullet* bullet_;
     vector<Node*> scene_;
+    //vector<int> deleted_;
 
     static const float fallSpeed = 0.2f;
+    static const float bulletSpeed = 0.7f;
+    static const float shuttleSpeed = 0.3f;
+    static const int smallMeteors = 4;
 
     void updateMeteor(double dt, vector<Node*>::iterator nodeIt);
     void updateBullet(double dt, vector<Node*>::iterator nodeIt);
 
 public:
     Game(int w, int h): inited_(false), time_(0) { init(w, h); };
+    ~Game();
     bool init(int w, int h);
     void deInit() {};
     void work(double dt);
     void pause();
     void resume();
+    void tap(float x, float y);
 };
 
 const char gVertexShader[] =
@@ -167,9 +172,7 @@ bool Game::init(int w, int h) {
 
     if (!inited_) {
         shuttle_ = new Shuttle(width_, height_);
-        bullet_ = new Bullet(width_, height_);
         scene_.push_back(shuttle_);
-        scene_.push_back(bullet_);
 
         for (int i = 0; i < 2; ++i) {
             scene_.push_back(new Meteor(width_, height_));
@@ -184,6 +187,17 @@ bool Game::init(int w, int h) {
 void Game::pause() { LOGI("Game::pause"); }
 void Game::resume() { LOGI("Game::resume"); }
 
+void Game::tap(float x, float y) {
+    Bullet* bullet = new Bullet(width_, height_);
+    bullet->translate(shuttle_->getX(), 0.0f);
+    scene_.push_back(bullet);
+
+    float dx = x - shuttle_->getX();
+    dx = copysignf(1.0, dx) * fmin(shuttleSpeed, abs(dx));
+
+    shuttle_->translate(dx, 0.0f);
+}
+
 void Game::work(double dt) {
     time_ += dt;
 
@@ -197,12 +211,12 @@ void Game::work(double dt) {
 
     glLineWidth(2.0f);
 
-    double secs;
-    if (modf(time_, &secs) <= dt) {
-        LOGI("second1");
-    }
-
     for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
+        if (*node == NULL) {
+            //scene_.erase(node);
+            continue;
+        }
+
         (*node)->draw(dt, gaPositionHandle_, gaColorHandle_);
 
         if ((*node)->getType() == METEOR) {
@@ -221,21 +235,54 @@ void Game::updateMeteor(double dt, vector<Node*>::iterator nodeIt) {
     meteor->rotate(0.1f);
 
     if (meteor->isOut()) {
-        scene_.erase(nodeIt);
-        delete meteor;
+        //deleted_.push_back(nodeIt - scene_.begin());
+        /*scene_.erase(nodeIt);
+        delete meteor;*/
 
-        Meteor* newMeteor = new Meteor(width_, height_);
-        scene_.push_back(newMeteor);
+        /*Meteor* newMeteor = new Meteor(width_, height_);
+        scene_.push_back(newMeteor);*/
     }
 }
 
 void Game::updateBullet(double dt, vector<Node*>::iterator nodeIt) {
     Bullet* bullet = (Bullet*) (*nodeIt);
-    bullet->translate(0.0f, dt * fallSpeed);
+    bullet->translate(0.0f, dt * bulletSpeed);
 
     if (bullet->isOut()) {
         scene_.erase(nodeIt);
         delete bullet;
+    }
+
+    /*bool collide = false;
+    for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
+        if ((*node)->getType() == METEOR && bullet->isIntersect(*node)) {
+            collide = true;
+
+            Meteor* meteor = (Meteor*) (*node);
+            float x = meteor->getX();
+            float y = meteor->getY();
+            //delete meteor;
+            //*node = NULL;
+
+            for (int i = 0; i < smallMeteors; ++i) {
+                Meteor* smallMeteor = new Meteor(width_, height_);
+                smallMeteor->scale(0.3f, 0.3f);
+                smallMeteor->translate(x, y);
+                scene_.push_back(smallMeteor);
+            }
+        }
+    }
+
+    if (collide) {
+        delete bullet;
+        *nodeIt = NULL;
+    }*/
+}
+
+Game::~Game() {
+    for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
+        scene_.erase(node);
+        delete (*node);
     }
 }
 

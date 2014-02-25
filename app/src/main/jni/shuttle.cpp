@@ -12,13 +12,12 @@ class Shuttle: public Node {
 protected:
 
 public:
-    Shuttle(int w, int h): Node(w, h) { };
+    Shuttle(int w, int h);
     ~Shuttle();
-    void init(int width, int height);
     NodeType getType() { return SHUTTLE; };
 };
 
-void Shuttle::init(int width, int height) {
+Shuttle::Shuttle(int width, int height) {
     LOGI("Init shuttle");
     vertexCount_ = 3;
 
@@ -37,8 +36,6 @@ void Shuttle::init(int width, int height) {
 
     scale(0.3f, 0.3f * width / height);
     translate(0.0f, -0.95f);
-
-    Node::init(width, height);
 }
 
 Shuttle::~Shuttle() {

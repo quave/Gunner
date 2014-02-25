@@ -12,13 +12,13 @@ class Bullet: public Node {
 protected:
 
 public:
-    Bullet(int w, int h): Node(w, h) { };
+    Bullet(int w, int h);
     ~Bullet();
-    void init(int width, int height);
     NodeType getType() { return BULLET; };
+    bool isIntersect(Node* node);
 };
 
-void Bullet::init(int width, int height) {
+Bullet::Bullet(int width, int height) {
     LOGI("Init bullet");
     vertexCount_ = 4;
 
@@ -40,8 +40,15 @@ void Bullet::init(int width, int height) {
     scale(0.08f, 0.08f * width / height);
 
     translate(0.0f, -0.6f);
+}
 
-    Node::init(width, height);
+bool Bullet::isIntersect(Node* node) {
+    if (vertices_ == NULL) {
+        return false;
+    }
+
+    float x = vertices_[0], y = vertices_[1];
+    return node->isInside(x, y);
 }
 
 Bullet::~Bullet() {

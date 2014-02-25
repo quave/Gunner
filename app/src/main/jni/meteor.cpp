@@ -14,17 +14,15 @@ class Meteor: public Node {
     void generate();
 
 public:
-    Meteor(int w, int h): Node(w, h) { };
+    Meteor(int w, int h);
     ~Meteor();
-    void init(int w, int h);
     NodeType getType() { return METEOR; };
 };
 
-void Meteor::init(int width, int height) {
+Meteor::Meteor(int width, int height) {
     LOGI("Init meteor");
 
     vertexCount_ = rand() % 6 + 4;
-    LOGI ("Meteor vertex count = %d", vertexCount_);
 
     vertices_ = new GLfloat[vertexCount_ * DIMENTIONS];
     generate();
@@ -38,9 +36,8 @@ void Meteor::init(int width, int height) {
     }
 
     scale(0.4f, 0.4f * width / height);
-    translate(((float)rand() / RAND_MAX) - 1.0f, 1.2f);
-
-    Node::init(width, height);
+    translate(((float)rand() / RAND_MAX) - 1.0f, 1.0f);
+    LOGI("Init end meteor");
 }
 
 void Meteor::generate() {
@@ -55,7 +52,6 @@ void Meteor::generate() {
     float y1 = vertices_[1] = 0;
     float x01 = x1;
     float y01 = y1;
-    LOGI("r1=%1.4f, a1=%1.4f", r1, a1);
 
     // Generate second point
     float r2 = (float)rand() / RAND_MAX / 2 + 0.5f;
@@ -64,7 +60,6 @@ void Meteor::generate() {
     float y2 = vertices_[3] = r2 * sin(a2);
     float x02 = x2;
     float y02 = y2;
-    LOGI("r2=%1.4f, a2=%1.4f", r2, a2);
 
     for(int i = 2; i < vertexCount_ - 1; ++i) {
         float a0 = i * (2 * M_PI) / vertexCount_;
@@ -79,7 +74,6 @@ void Meteor::generate() {
         float r = (float)rand() / RAND_MAX * (rmax - rmin) + rmin;
         float x = vertices_[i * 2] = r * x0;
         float y = vertices_[i * 2 + 1] = r * y0;
-        LOGI("r=%1.4f, a=%1.4f, rmax=%1.4f, rmin=%1.4f", r, a0, rmax, rmin);
 
         x1 = x2;
         y1 = y2;
@@ -98,7 +92,6 @@ void Meteor::generate() {
     if (rmax < 0.0f) { rmax = 1.0f; rmin=0.5f; }
 
     float r = (float)rand() / RAND_MAX * (rmax - rmin) + rmin;
-    LOGI("r=%1.4f, a=%1.4f, rmax=%1.4f, rmin=%1.4f", r, a0, rmax, rmin);
 
     int index = (vertexCount_ - 1) * 2;
     vertices_[index] = r * x0;
