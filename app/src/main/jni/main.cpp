@@ -113,7 +113,7 @@ int Engine::InitDisplay()
         // initialize OpenGL ES and EGL
         if( EGL_SUCCESS != gl_context_->Resume( app_->window ) )
         {
-            // Reload resources
+            LOGI("GLContext Resume failed");
         }
     }
 
@@ -130,7 +130,7 @@ int Engine::InitDisplay()
 void Engine::DrawFrame()
 {
     double newTime = monitor_.GetCurrentTime();
-    double dt = newTime - time_;
+    double dt = time_ == 0 ? 0 : newTime - time_;
     time_ = newTime;
 
     game_->work(dt);
@@ -138,7 +138,7 @@ void Engine::DrawFrame()
     // Swap
     if( EGL_SUCCESS != gl_context_->Swap() )
     {
-        LOGI("swap failed");
+        LOGI("GLContext::Swap failed");
     }
 }
 
@@ -200,6 +200,7 @@ void Engine::HandleCmd( struct android_app* app, int32_t cmd )
         if( app->window != NULL )
         {
             eng->InitDisplay();
+            eng->DrawFrame();
         }
         break;
     case APP_CMD_TERM_WINDOW:
@@ -222,6 +223,7 @@ void Engine::HandleCmd( struct android_app* app, int32_t cmd )
         //eng->SuspendSensors();
         // Also stop animating.
         eng->has_focus_ = false;
+        eng->DrawFrame();
         break;
     case APP_CMD_LOW_MEMORY:
         LOGI("APP_CMD_LOW_MEMORY");

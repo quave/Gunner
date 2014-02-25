@@ -3,11 +3,8 @@
 
 #include <GLES2/gl2.h>
 #include <math.h>
-#include <vecmath.h>
 
 #include "node.cpp"
-
-using namespace ndk_helper;
 
 class Meteor: public Node {
 
@@ -17,6 +14,7 @@ public:
     Meteor(int w, int h);
     ~Meteor();
     NodeType getType() { return METEOR; };
+    bool isOut();
 };
 
 Meteor::Meteor(int width, int height) {
@@ -37,7 +35,8 @@ Meteor::Meteor(int width, int height) {
 
     scale(0.4f, 0.4f * width / height);
     translate(((float)rand() / RAND_MAX) - 1.0f, 1.0f);
-    LOGI("Init end meteor");
+
+    LOGI("Init end meteor (%1.4f, %1.4f)", x_, y_);
 }
 
 void Meteor::generate() {
@@ -96,6 +95,25 @@ void Meteor::generate() {
     int index = (vertexCount_ - 1) * 2;
     vertices_[index] = r * x0;
     vertices_[index + 1] = r * y0;
+}
+
+bool Meteor::isOut() {
+    if (vertices_ == NULL) { return false; }
+
+    float xmin = XMAX;
+    float xmax = XMIN;
+    float ymax = YMIN;
+
+    for (int i = 0; i < vertexCount_; ++i) {
+        float x = vertices_[i * 2];
+        float y = vertices_[i * 2 + 1];
+
+        if (x < xmin) { xmin = x; }
+        if (x > xmax) { xmax = x; }
+        if (y > ymax) { ymax = y; }
+    }
+
+    return  xmax <= XMIN || xmin >= XMAX || ymax <= YMIN;
 }
 
 Meteor::~Meteor() {

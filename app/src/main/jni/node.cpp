@@ -41,7 +41,7 @@ public:
     virtual void draw(double dt, GLuint hPos, GLuint hCol);
     int getVertexCount() {return vertexCount_;};
     virtual NodeType getType() { return NODE; };
-    bool isOut();
+    virtual bool isOut();
     float getX() { return x_; };
     float getY() { return y_; };
 

@@ -2,10 +2,7 @@
 #define SHUTTLE_CPP
 
 #include <GLES2/gl2.h>
-#include <vecmath.h>
 #include "node.cpp"
-
-using namespace ndk_helper;
 
 class Shuttle: public Node {
 
