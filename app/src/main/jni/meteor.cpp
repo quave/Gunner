@@ -12,13 +12,12 @@ class Meteor: public Node {
 
 public:
     Meteor(int w, int h);
-    ~Meteor();
     NodeType getType() { return METEOR; };
     bool isOut();
 };
 
 Meteor::Meteor(int width, int height) {
-    LOGI("Init meteor");
+    //LOGI("Init meteor");
 
     vertexCount_ = rand() % 6 + 4;
 
@@ -36,7 +35,7 @@ Meteor::Meteor(int width, int height) {
     scale(0.4f, 0.4f * width / height);
     translate(((float)rand() / RAND_MAX) - 1.0f, 1.0f);
 
-    LOGI("Init end meteor (%1.4f, %1.4f)", x_, y_);
+    //LOGI("Init end meteor (%1.4f, %1.4f)", x_, y_);
 }
 
 void Meteor::generate() {
@@ -114,11 +113,6 @@ bool Meteor::isOut() {
     }
 
     return  xmax <= XMIN || xmin >= XMAX || ymax <= YMIN;
-}
-
-Meteor::~Meteor() {
-    if (vertices_ != NULL) { delete [] vertices_; }
-    if (colors_ != NULL) { delete [] colors_; }
 }
 
 #endif

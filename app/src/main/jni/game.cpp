@@ -14,11 +14,17 @@
 #include <math.h>
 #include <time.h>
 #include <vector>
+#include <string>
+#include <algorithm>
+#include <sstream>
+#include <iterator>
+#include <iostream>
 
 #include "util.cpp"
 #include "node.cpp"
 #include "shuttle.cpp"
 #include "meteor.cpp"
+#include "smallMeteor.cpp"
 #include "bullet.cpp"
 
 using namespace ndk_helper;
@@ -222,33 +228,47 @@ void Game::work(double dt) {
     for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
         (*node)->draw(dt, gaPositionHandle_, gaColorHandle_);
 
-        if ((*node)->getType() == METEOR) {
+        enum NodeType type = (*node)->getType();
+
+        if (type == METEOR || type == SMALL_METEOR) {
             updateMeteor(dt, node);
         }
 
-        if ((*node)->getType() == BULLET) {
+        if (type == BULLET) {
             updateBullet(dt, node);
         }
     }
 
-    /*if (smallMeteorX_ || smallMeteorY_) {
+    if (!deleted_.empty()) {
+        std::ostringstream oss;
+        sort(deleted_.begin(), deleted_.end());
+        deleted_.erase( unique( deleted_.begin(), deleted_.end() ), deleted_.end() );
+        std::copy(deleted_.begin(), deleted_.end(), std::ostream_iterator<int>(oss, ","));
+        LOGI("Delete %d:%s, from %d", deleted_.size(), oss.str().c_str(), scene_.size());
+    }
+    for (int i = deleted_.size() - 1; i >= 0; --i) {
+        int index = deleted_[i];
+        LOGI("Try delete at %d, size %d", index, scene_.size());
+        delete scene_[index];
+        LOGI("Deleted");
+        scene_.erase(scene_.begin() + index);
+        LOGI("Erased");
+    }
+    if (!deleted_.empty()) {
+        deleted_.clear();
+        LOGI("Deleted_ cleared %d", deleted_.size());
+    }
+
+    if (smallMeteorX_ || smallMeteorY_) {
+
         LOGI("Spawn small meteors at %1.2f, %1.2f", smallMeteorX_, smallMeteorY_);
         for (int i = 0; i < smallMeteors; ++i) {
-            Meteor* smallMeteor = new Meteor(width_, height_);
-            smallMeteor->scale(0.3f, 0.3f);
-            smallMeteor->translate(smallMeteorX_, smallMeteorY_);
+            SmallMeteor* smallMeteor = new SmallMeteor(width_, height_, smallMeteorX_, smallMeteorY_);
             scene_.push_back(smallMeteor);
         }
 
         smallMeteorX_ = smallMeteorY_ = 0.0f;
-    }*/
-
-    for (vector<int>::iterator i = deleted_.begin(); i < deleted_.end(); ++i) {
-        LOGI("Delete %d", *i);
-        delete scene_[*i];
-        scene_.erase(scene_.begin() + *i);
     }
-    deleted_.clear();
 }
 
 void Game::updateMeteor(double dt, vector<Node*>::iterator nodeIt) {
@@ -271,7 +291,9 @@ void Game::updateBullet(double dt, vector<Node*>::iterator nodeIt) {
     }
 
     for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
-        if ((*node)->getType() == METEOR && bullet->isIntersect(*node)) {
+        enum NodeType type = (*node)->getType();
+
+        if ((type == METEOR || type == SMALL_METEOR) && bullet->isIntersect(*node)) {
             deleted_.push_back(nodeIt - scene_.begin());
 
             Meteor* meteor = (Meteor*) (*node);
@@ -279,15 +301,16 @@ void Game::updateBullet(double dt, vector<Node*>::iterator nodeIt) {
             float y = meteor->getY();
             deleted_.push_back(node - scene_.begin());
 
-            smallMeteorX_ = meteor->getX();
-            smallMeteorY_ = meteor->getY();
+            if (type == METEOR) {
+                smallMeteorX_ = meteor->getX();
+                smallMeteorY_ = meteor->getY();
+            }
         }
     }
 }
 
 Game::~Game() {
     for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
-        scene_.erase(node);
         delete (*node);
     }
 }

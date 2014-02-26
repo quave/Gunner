@@ -13,11 +13,12 @@
 
 using namespace ndk_helper;
 
-enum NodeType{
+enum NodeType {
     NODE,
     SHUTTLE,
     BULLET,
-    METEOR
+    METEOR,
+    SMALL_METEOR
 };
 
 class Node {
@@ -35,6 +36,7 @@ public:
         colors_(NULL),
         vertexCount_(0),
         x_(0.0f), y_(0.0f) {};
+    ~Node();
     virtual void scale(float, float);
     virtual void translate(float, float);
     virtual void rotate(float);
@@ -159,6 +161,11 @@ bool Node::isInside(float x, float y) {
     }
 
     return result;
+}
+
+Node::~Node() {
+    if (vertices_ != NULL) { delete [] vertices_; }
+    if (colors_ != NULL) { delete [] colors_; }
 }
 
 #endif

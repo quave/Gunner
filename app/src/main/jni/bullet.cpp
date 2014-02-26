@@ -10,7 +10,6 @@ protected:
 
 public:
     Bullet(int w, int h);
-    ~Bullet();
     NodeType getType() { return BULLET; };
     bool isIntersect(Node* node);
 };
@@ -46,11 +45,6 @@ bool Bullet::isIntersect(Node* node) {
 
     float x = vertices_[0], y = vertices_[1];
     return node->isInside(x, y);
-}
-
-Bullet::~Bullet() {
-    if (vertices_ != NULL) { delete [] vertices_; }
-    if (colors_ != NULL) { delete [] colors_; }
 }
 
 #endif

@@ -10,7 +10,6 @@ protected:
 
 public:
     Shuttle(int w, int h);
-    ~Shuttle();
     NodeType getType() { return SHUTTLE; };
 };
 
@@ -33,11 +32,6 @@ Shuttle::Shuttle(int width, int height) {
 
     scale(0.3f, 0.3f * width / height);
     translate(0.0f, -0.95f);
-}
-
-Shuttle::~Shuttle() {
-    if (vertices_ != NULL) { delete [] vertices_; }
-    if (colors_ != NULL) { delete [] colors_; }
 }
 
 #endif
