@@ -14,11 +14,7 @@
 #include <math.h>
 #include <time.h>
 #include <vector>
-#include <string>
 #include <algorithm>
-#include <sstream>
-#include <iterator>
-#include <iostream>
 
 #include "util.cpp"
 #include "node.cpp"
@@ -161,6 +157,7 @@ bool Game::init(int w, int h) {
     width_ = w;
     height_ = h;
 
+    // Init GLES
     LOGI("setupGraphics(%d, %d)", w, h);
     gProgram_ = createProgram(gVertexShader, gFragmentShader);
     if (!gProgram_) {
@@ -177,10 +174,12 @@ bool Game::init(int w, int h) {
     glViewport(0, 0, w, h);
     checkGlError("glViewport");
 
+    // Init random generator
     struct timeval now;
     gettimeofday(&now, NULL);
     srand(now.tv_usec);
 
+    // Init scene objects
     if (!inited_) {
         shuttle_ = new Shuttle(width_, height_);
         scene_.push_back(shuttle_);
@@ -213,11 +212,12 @@ void Game::work(double dt) {
     dt = fmin(dt, 1.0f);
     time_ += dt;
 
+    // Clear some buffers
     glClearColor(0.2353f, 0.2471f, 0.2549f, 1.0f);
     checkGlError("glClearColor");
     glClear( GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
     checkGlError("glClear");
-
+    // Use some programs
     glUseProgram(gProgram_);
     checkGlError("glUseProgram");
 
@@ -225,58 +225,61 @@ void Game::work(double dt) {
 
     //TODO: generate meteors on time
 
+    // Render scene loop
     for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
+        // Let's draw it
         (*node)->draw(dt, gaPositionHandle_, gaColorHandle_);
 
         enum NodeType type = (*node)->getType();
 
+        // If it is a meteor than update it's position and stuff
         if (type == METEOR || type == SMALL_METEOR) {
             updateMeteor(dt, node);
         }
 
+        // Do the same for bullet
         if (type == BULLET) {
             updateBullet(dt, node);
         }
     }
 
     if (!deleted_.empty()) {
-        std::ostringstream oss;
+        // Sort "deleted" array to be able remove elements in right order
         sort(deleted_.begin(), deleted_.end());
+        // Remove duplicates
         deleted_.erase( unique( deleted_.begin(), deleted_.end() ), deleted_.end() );
-        std::copy(deleted_.begin(), deleted_.end(), std::ostream_iterator<int>(oss, ","));
-        LOGI("Delete %d:%s, from %d", deleted_.size(), oss.str().c_str(), scene_.size());
     }
+    // Remove elements in backwards order
     for (int i = deleted_.size() - 1; i >= 0; --i) {
         int index = deleted_[i];
-        LOGI("Try delete at %d, size %d", index, scene_.size());
         delete scene_[index];
-        LOGI("Deleted");
         scene_.erase(scene_.begin() + index);
-        LOGI("Erased");
     }
-    if (!deleted_.empty()) {
-        deleted_.clear();
-        LOGI("Deleted_ cleared %d", deleted_.size());
-    }
+    // All useless elements are deleted so clear the "deleted array"
+    deleted_.clear();
 
+    // If flag is set than it's time to spawn small ones
+    // And if we hit meteor at (0, 0), well.. than it's a lucky shot
     if (smallMeteorX_ || smallMeteorY_) {
-
-        LOGI("Spawn small meteors at %1.2f, %1.2f", smallMeteorX_, smallMeteorY_);
         for (int i = 0; i < smallMeteors; ++i) {
             SmallMeteor* smallMeteor = new SmallMeteor(width_, height_, smallMeteorX_, smallMeteorY_);
             scene_.push_back(smallMeteor);
         }
-
+        // Clear the spawn flag
         smallMeteorX_ = smallMeteorY_ = 0.0f;
     }
 }
 
 void Game::updateMeteor(double dt, vector<Node*>::iterator nodeIt) {
     Meteor* meteor = (Meteor*) (*nodeIt);
+    // Move meteor at fallSpeed
     meteor->translate(0.0f, -(dt * fallSpeed));
+    // Make it spin
     meteor->rotate(0.1f);
+    // Add some random direction
     //TODO: add meteor x speed
 
+    // Mark it for deletion if it's out
     if (meteor->isOut()) {
         deleted_.push_back(nodeIt - scene_.begin());
     }
@@ -284,24 +287,28 @@ void Game::updateMeteor(double dt, vector<Node*>::iterator nodeIt) {
 
 void Game::updateBullet(double dt, vector<Node*>::iterator nodeIt) {
     Bullet* bullet = (Bullet*) (*nodeIt);
+    // Move the bullet up
     bullet->translate(0.0f, dt * bulletSpeed);
 
+    // Mark it for deletion if it's out
     if (bullet->isOut()) {
         deleted_.push_back(nodeIt - scene_.begin());
     }
 
+    // Detect if bullet hit meteor
     for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
         enum NodeType type = (*node)->getType();
 
+        // And if it hit...
         if ((type == METEOR || type == SMALL_METEOR) && bullet->isIntersect(*node)) {
+            // Remove the bullet
             deleted_.push_back(nodeIt - scene_.begin());
-
-            Meteor* meteor = (Meteor*) (*node);
-            float x = meteor->getX();
-            float y = meteor->getY();
+            // Remove the meteor
             deleted_.push_back(node - scene_.begin());
 
+            // And if it is a big one set flag to spawn small meteors
             if (type == METEOR) {
+                Meteor* meteor = (Meteor*) (*node);
                 smallMeteorX_ = meteor->getX();
                 smallMeteorY_ = meteor->getY();
             }
