@@ -11,10 +11,10 @@ protected:
 public:
     Shuttle(int w, int h);
     NodeType getType() { return SHUTTLE; };
+    bool isIntersect(Node* node);
 };
 
 Shuttle::Shuttle(int width, int height) {
-    LOGI("Init shuttle");
     vertexCount_ = 3;
 
     vertices_ = new GLfloat[vertexCount_ * DIMENTIONS];
@@ -32,6 +32,23 @@ Shuttle::Shuttle(int width, int height) {
 
     scale(0.3f, 0.3f * width / height);
     translate(0.0f, -0.95f);
+}
+
+bool Shuttle::isIntersect(Node* node) {
+    if (vertices_ == NULL) {
+        return false;
+    }
+
+    for (int i = 0; i < vertexCount_; ++i) {
+        float x = vertices_[i * 2];
+        float y = vertices_[i * 2 + 1];
+
+        if (node->isInside(x, y)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 #endif

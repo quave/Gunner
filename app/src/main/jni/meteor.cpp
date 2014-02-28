@@ -9,14 +9,18 @@
 class Meteor: public Node {
 
     void generate();
+    float xFallSpeed_;
 
 public:
     Meteor(int w, int h);
     NodeType getType() { return METEOR; };
     bool isOut();
+    float getXFallSpeed() { return xFallSpeed_; }
 };
 
-Meteor::Meteor(int width, int height) {
+Meteor::Meteor(int width, int height)
+    : xFallSpeed_(0.0f)
+{
     //LOGI("Init meteor");
 
     vertexCount_ = rand() % 6 + 4;
@@ -34,6 +38,8 @@ Meteor::Meteor(int width, int height) {
 
     scale(0.4f, 0.4f * width / height);
     translate(((float)rand() / RAND_MAX) - 1.0f, 1.0f);
+
+    xFallSpeed_ = -1.0f * copysignf(1.0, x_) * ((float)rand() / RAND_MAX) * 0.01f;
 
     //LOGI("Init end meteor (%1.4f, %1.4f)", x_, y_);
 }

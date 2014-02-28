@@ -18,12 +18,83 @@ package com.android.gunner;
 
 import android.app.NativeActivity;
 import android.os.Bundle;
+import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup.MarginLayoutParams;
+import android.view.WindowManager.LayoutParams;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+import android.widget.TextView;
 
 
 public class GunnerActivity extends NativeActivity {
+    GunnerActivity _activity;
+    PopupWindow _popupWindow;
+    TextView _labelUpRight;
+    TextView _labelCenter;
 
     @Override
     protected void onCreate(Bundle icicle) {
         super.onCreate(icicle);
+    }
+
+    public void showUI()
+    {
+        if( _popupWindow != null )
+            return;
+
+        _activity = this;
+
+        this.runOnUiThread(new Runnable()  {
+            @Override
+            public void run()  {
+                LayoutInflater layoutInflater
+                        = (LayoutInflater)getBaseContext()
+                        .getSystemService(LAYOUT_INFLATER_SERVICE);
+                View popupView = layoutInflater.inflate(R.layout.widgets, null);
+                _popupWindow = new PopupWindow(
+                        popupView,
+                        LayoutParams.WRAP_CONTENT,
+                        LayoutParams.WRAP_CONTENT);
+
+                LinearLayout mainLayout = new LinearLayout(_activity);
+                MarginLayoutParams params = new MarginLayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                params.setMargins(0, 0, 0, 0);
+                _activity.setContentView(mainLayout, params);
+
+                // Show our UI over NativeActivity window
+                _popupWindow.showAtLocation(mainLayout, Gravity.TOP | Gravity.LEFT, 10, 10);
+                _popupWindow.update();
+
+                _labelUpRight = (TextView)popupView.findViewById(R.id.textViewUpRight);
+                _labelCenter = (TextView)popupView.findViewById(R.id.textViewCenter);
+            }});
+    }
+
+    public void showCenterText(final String text)
+    {
+        if( _labelUpRight == null )
+            return;
+
+        _activity = this;
+        this.runOnUiThread(new Runnable()  {
+            @Override
+            public void run()  {
+                _labelCenter.setText(text);
+            }});
+    }
+
+    public void showScore(final int score)
+    {
+        if( _labelCenter == null )
+            return;
+
+        _activity = this;
+        this.runOnUiThread(new Runnable()  {
+            @Override
+            public void run()  {
+                _labelUpRight.setText(String.format("Score %d", score));
+            }});
     }
 }

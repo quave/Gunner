@@ -15,6 +15,8 @@
 #include <time.h>
 #include <vector>
 #include <algorithm>
+#include <string>
+#include <sstream>
 
 #include "util.cpp"
 #include "node.cpp"
@@ -27,7 +29,6 @@ using namespace ndk_helper;
 using namespace std;
 
 class Game {
-    bool inited_;
     GLuint gProgram_;
     GLuint gaPositionHandle_;
     GLuint gaColorHandle_;
@@ -39,9 +40,10 @@ class Game {
     Mat4 view_;
     int width_;
     int height_;
-    double time_;
     float smallMeteorX_;
     float smallMeteorY_;
+    int score_;
+    bool isOver_;
 
     Shuttle* shuttle_;
     vector<Node*> scene_;
@@ -54,19 +56,16 @@ class Game {
 
     void updateMeteor(double dt, vector<Node*>::iterator nodeIt);
     void updateBullet(double dt, vector<Node*>::iterator nodeIt);
+    void over();
 
 public:
-    Game(int w, int h): inited_(false), time_(0),
-        smallMeteorX_(0.0f), smallMeteorY_(0.0f)
-    { init(w, h); };
-
+    Game(int w, int h);
     ~Game();
-    bool init(int w, int h);
-    void deInit() {};
     void work(double dt);
-    void pause();
-    void resume();
     void tap(float x, float y);
+    bool isOver() { return isOver_; }
+    string getGameOverText();
+    int getScore() { return score_; }
 };
 
 const char gVertexShader[] =
@@ -148,21 +147,21 @@ GLuint Game::createProgram(const char* pVertexSource, const char* pFragmentSourc
     return program;
 }
 
-bool Game::init(int w, int h) {
+Game::Game(int w, int h)
+    : score_(0), isOver_(false), width_(w), height_(h),
+    smallMeteorX_(0.0f), smallMeteorY_(0.0f)
+{
     printGLString("Version", GL_VERSION);
     printGLString("Vendor", GL_VENDOR);
     printGLString("Renderer", GL_RENDERER);
     printGLString("Extensions", GL_EXTENSIONS);
 
-    width_ = w;
-    height_ = h;
-
     // Init GLES
-    LOGI("setupGraphics(%d, %d)", w, h);
+    LOGI("setupGraphics(%d, %d)", width_, height_);
     gProgram_ = createProgram(gVertexShader, gFragmentShader);
     if (!gProgram_) {
         LOGE("Could not create program.");
-        return false;
+        return;
     }
     gaPositionHandle_ = glGetAttribLocation(gProgram_, "aPosition");
     checkGlError("glGetAttribLocation");
@@ -180,22 +179,9 @@ bool Game::init(int w, int h) {
     srand(now.tv_usec);
 
     // Init scene objects
-    if (!inited_) {
-        shuttle_ = new Shuttle(width_, height_);
-        scene_.push_back(shuttle_);
-
-        for (int i = 0; i < 2; ++i) {
-            scene_.push_back(new Meteor(width_, height_));
-        }
-
-        inited_ = true;
-    }
-
-    return true;
+    shuttle_ = new Shuttle(width_, height_);
+    scene_.push_back(shuttle_);
 }
-
-void Game::pause() { LOGI("Game::pause"); }
-void Game::resume() { LOGI("Game::resume"); }
 
 void Game::tap(float x, float y) {
     Bullet* bullet = new Bullet(width_, height_);
@@ -210,7 +196,6 @@ void Game::tap(float x, float y) {
 
 void Game::work(double dt) {
     dt = fmin(dt, 1.0f);
-    time_ += dt;
 
     // Clear some buffers
     glClearColor(0.2353f, 0.2471f, 0.2549f, 1.0f);
@@ -223,7 +208,11 @@ void Game::work(double dt) {
 
     glLineWidth(2.0f);
 
-    //TODO: generate meteors on time
+    // Randomly generate meteors at approximate rate one per second
+    if ( ((float)rand() / RAND_MAX) < dt ) {
+        Meteor* meteor = new Meteor(width_, height_);
+        scene_.push_back(meteor);
+    }
 
     // Render scene loop
     for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
@@ -273,15 +262,18 @@ void Game::work(double dt) {
 void Game::updateMeteor(double dt, vector<Node*>::iterator nodeIt) {
     Meteor* meteor = (Meteor*) (*nodeIt);
     // Move meteor at fallSpeed
-    meteor->translate(0.0f, -(dt * fallSpeed));
+    meteor->translate(meteor->getXFallSpeed(), -(dt * fallSpeed));
     // Make it spin
     meteor->rotate(0.1f);
     // Add some random direction
-    //TODO: add meteor x speed
 
     // Mark it for deletion if it's out
     if (meteor->isOut()) {
         deleted_.push_back(nodeIt - scene_.begin());
+    }
+
+    if (shuttle_->isIntersect(meteor)) {
+        over();
     }
 }
 
@@ -311,10 +303,30 @@ void Game::updateBullet(double dt, vector<Node*>::iterator nodeIt) {
                 Meteor* meteor = (Meteor*) (*node);
                 smallMeteorX_ = meteor->getX();
                 smallMeteorY_ = meteor->getY();
+
+                score_++;
+            } else {
+                score_ += 2;
             }
         }
     }
 }
+
+void Game::over() {
+    for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
+        delete (*node);
+    }
+    scene_.clear();
+
+    isOver_ = true;
+}
+
+string Game::getGameOverText() {
+    stringstream ss;
+    ss << "GAME OVER" << endl << "Your score is " << score_;
+
+    return ss.str();
+ }
 
 Game::~Game() {
     for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {

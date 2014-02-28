@@ -20,15 +20,17 @@
 #include <jni.h>
 #include <errno.h>
 
-#include <android/sensor.h>
 #include <android/log.h>
 #include <android_native_app_glue.h>
 #include <android/native_window_jni.h>
 #include <cpu-features.h>
 #include <NDKHelper.h>
+#include <string>
 
 #include "util.cpp"
 #include "game.cpp"
+
+using namespace std;
 
 //-------------------------------------------------------------------------
 //Preprocessor
@@ -42,82 +44,112 @@ class Engine
 {
     Game* game_;
 
-    ndk_helper::GLContext* gl_context_;
+    ndk_helper::GLContext* glContext_;
 
-    bool initialized_resources_;
-    bool has_focus_;
+    bool initializedResources_;
+    bool hasFocus_;
 
-    ndk_helper::DragDetector drag_detector_;
+    ndk_helper::DragDetector dragDetector_;
     ndk_helper::PerfMonitor monitor_;
     double time_;
 
     android_app* app_;
 
-    ASensorManager* sensor_manager_;
-    const ASensor* accelerometer_sensor_;
-    ASensorEventQueue* sensor_event_queue_;
-
-    void TransformPosition( ndk_helper::Vec2& vec );
+    void transformPosition( ndk_helper::Vec2& vec );
 
 public:
-    static void HandleCmd( struct android_app* app, int32_t cmd );
-    static int32_t HandleInput( android_app* app, AInputEvent* event );
+    static void handleCmd( struct android_app* app, int32_t cmd );
+    static int32_t handleInput( android_app* app, AInputEvent* event );
 
     Engine();
 
-    void SetState( android_app* state );
-    int InitDisplay();
-    void DrawFrame();
-    void TermDisplay();
-    void TrimMemory();
-    bool IsReady();
+    void setState( android_app* state );
+    int initDisplay();
+    void drawFrame();
+    void termDisplay();
+    void trimMemory();
+    bool isReady();
 
-    void UpdatePosition( AInputEvent* event,
-            int32_t iIndex,
-            float& fX,
-            float& fY );
-
-    void InitSensors();
-    void ProcessSensors( int32_t id );
-    void SuspendSensors();
-    void ResumeSensors();
+    void showUI();
+    void showScore(int score);
+    void showCenterText(string text);
 };
 
 //-------------------------------------------------------------------------
 //Ctor
 //-------------------------------------------------------------------------
 Engine::Engine() :
-                initialized_resources_( false ),
-                has_focus_( false ),
+                initializedResources_( false ),
+                hasFocus_( false ),
                 app_( NULL ),
-                time_ ( 0 ),
-                sensor_manager_( NULL ),
-                accelerometer_sensor_( NULL ),
-                sensor_event_queue_( NULL )
+                time_ ( 0 )
 {
-    gl_context_ = ndk_helper::GLContext::GetInstance();
+    glContext_ = ndk_helper::GLContext::GetInstance();
+}
+
+void Engine::showUI()
+{
+    JNIEnv *jni;
+    app_->activity->vm->AttachCurrentThread( &jni, NULL );
+
+    //Default class retrieval
+    jclass clazz = jni->GetObjectClass( app_->activity->clazz );
+    jmethodID methodID = jni->GetMethodID( clazz, "showUI", "()V" );
+    jni->CallVoidMethod( app_->activity->clazz, methodID );
+
+    app_->activity->vm->DetachCurrentThread();
+    return;
+}
+
+void Engine::showScore(int score) {
+    JNIEnv *jni;
+    app_->activity->vm->AttachCurrentThread( &jni, NULL );
+
+    //Default class retrieval
+    jclass clazz = jni->GetObjectClass( app_->activity->clazz );
+    jmethodID methodID = jni->GetMethodID( clazz, "showScore", "(I)V" );
+    jni->CallVoidMethod( app_->activity->clazz, methodID, score);
+
+    app_->activity->vm->DetachCurrentThread();
+    return;
+}
+
+void Engine::showCenterText(string text) {
+    JNIEnv *jni;
+    app_->activity->vm->AttachCurrentThread( &jni, NULL );
+
+    jstring jtext = jni->NewStringUTF(text.c_str());
+    //Default class retrieval
+    jclass clazz = jni->GetObjectClass( app_->activity->clazz );
+    jmethodID methodID = jni->GetMethodID( clazz, "showCenterText", "(Ljava/lang/String;)V" );
+    jni->CallVoidMethod( app_->activity->clazz, methodID, jtext);
+
+    app_->activity->vm->DetachCurrentThread();
+    return;
 }
 
 /**
  * Initialize an EGL context for the current display.
  */
-int Engine::InitDisplay()
+int Engine::initDisplay()
 {
-    if( !initialized_resources_ )
+    if( !initializedResources_ )
     {
-        gl_context_->Init( app_->window );
-        initialized_resources_ = true;
+        glContext_->Init( app_->window );
+        initializedResources_ = true;
     }
     else
     {
         // initialize OpenGL ES and EGL
-        if( EGL_SUCCESS != gl_context_->Resume( app_->window ) )
+        if( EGL_SUCCESS != glContext_->Resume( app_->window ) )
         {
             LOGI("GLContext Resume failed");
         }
     }
 
-    game_ = new Game(gl_context_->GetScreenWidth(), gl_context_->GetScreenHeight());
+    showUI();
+
+    game_ = new Game(glContext_->GetScreenWidth(), glContext_->GetScreenHeight());
 
     LOGI("end init");
 
@@ -127,38 +159,43 @@ int Engine::InitDisplay()
 /**
  * Just the current frame in the display.
  */
-void Engine::DrawFrame()
+void Engine::drawFrame()
 {
     double newTime = monitor_.GetCurrentTime();
     double dt = time_ == 0 ? 0 : newTime - time_;
     time_ = newTime;
 
     game_->work(dt);
+    showScore(game_->getScore());
 
     // Swap
-    if( EGL_SUCCESS != gl_context_->Swap() )
+    if( EGL_SUCCESS != glContext_->Swap() )
     {
         LOGI("GLContext::Swap failed");
+    }
+
+    if (game_->isOver()) {
+        showCenterText(game_->getGameOverText());
     }
 }
 
 /**
  * Tear down the EGL context currently associated with the display.
  */
-void Engine::TermDisplay()
+void Engine::termDisplay()
 {
-    gl_context_->Suspend();
+    glContext_->Suspend();
 }
 
-void Engine::TrimMemory()
+void Engine::trimMemory()
 {
     LOGI( "Trimming memory" );
-    gl_context_->Invalidate();
+    glContext_->Invalidate();
 }
 /**
  * Process the next input event.
  */
-int32_t Engine::HandleInput( android_app* app, AInputEvent* event )
+int32_t Engine::handleInput( android_app* app, AInputEvent* event )
 {
     Engine* eng = (Engine*) app->userData;
     if( AInputEvent_getType( event ) != AINPUT_EVENT_TYPE_MOTION )
@@ -166,13 +203,13 @@ int32_t Engine::HandleInput( android_app* app, AInputEvent* event )
         return 0;
     }
 
-    ndk_helper::GESTURE_STATE dragState = eng->drag_detector_.Detect( event );
+    ndk_helper::GESTURE_STATE dragState = eng->dragDetector_.Detect( event );
 
     if( dragState == ndk_helper::GESTURE_STATE_START )
     {
         ndk_helper::Vec2 v;
-        eng->drag_detector_.GetPointer( v );
-        eng->TransformPosition(v);
+        eng->dragDetector_.GetPointer( v );
+        eng->transformPosition(v);
 
         float x, y;
         v.Value(x, y);
@@ -186,7 +223,7 @@ int32_t Engine::HandleInput( android_app* app, AInputEvent* event )
 /**
  * Process the next main command.
  */
-void Engine::HandleCmd( struct android_app* app, int32_t cmd )
+void Engine::handleCmd( struct android_app* app, int32_t cmd )
 {
     Engine* eng = (Engine*) app->userData;
     switch( cmd )
@@ -199,110 +236,59 @@ void Engine::HandleCmd( struct android_app* app, int32_t cmd )
         // The window is being shown, get it ready.
         if( app->window != NULL )
         {
-            eng->InitDisplay();
-            eng->DrawFrame();
+            eng->initDisplay();
+            eng->drawFrame();
         }
         break;
     case APP_CMD_TERM_WINDOW:
         LOGI("APP_CMD_TERM_WINDOW");
         // The window is being hidden or closed, clean it up.
-        eng->TermDisplay();
-        eng->has_focus_ = false;
+        eng->termDisplay();
+        eng->hasFocus_ = false;
         break;
     case APP_CMD_STOP:
         LOGI("APP_CMD_STOP");
         break;
     case APP_CMD_GAINED_FOCUS:
         LOGI("APP_CMD_GAINED_FOCUS");
-        //eng->ResumeSensors();
         //Start animation
-        eng->has_focus_ = true;
+        eng->hasFocus_ = true;
         break;
     case APP_CMD_LOST_FOCUS:
         LOGI("APP_CMD_LOST_FOCUS");
-        //eng->SuspendSensors();
         // Also stop animating.
-        eng->has_focus_ = false;
-        eng->DrawFrame();
+        eng->hasFocus_ = false;
+        eng->drawFrame();
         break;
     case APP_CMD_LOW_MEMORY:
         LOGI("APP_CMD_LOW_MEMORY");
         //Free up GL resources
-        eng->TrimMemory();
+        eng->trimMemory();
         break;
-    }
-}
-
-//-------------------------------------------------------------------------
-//Sensor handlers
-//-------------------------------------------------------------------------
-void Engine::InitSensors()
-{
-    sensor_manager_ = ASensorManager_getInstance();
-    accelerometer_sensor_ = ASensorManager_getDefaultSensor( sensor_manager_,
-            ASENSOR_TYPE_ACCELEROMETER );
-    sensor_event_queue_ = ASensorManager_createEventQueue( sensor_manager_, app_->looper,
-            LOOPER_ID_USER, NULL, NULL );
-}
-
-void Engine::ProcessSensors( int32_t id )
-{
-    // If a sensor has data, process it now.
-    if( id == LOOPER_ID_USER )
-    {
-        if( accelerometer_sensor_ != NULL )
-        {
-            ASensorEvent event;
-            while( ASensorEventQueue_getEvents( sensor_event_queue_, &event, 1 ) > 0 )
-            {
-            }
-        }
-    }
-}
-
-void Engine::ResumeSensors()
-{
-    // When our app gains focus, we start monitoring the accelerometer.
-    if( accelerometer_sensor_ != NULL )
-    {
-        ASensorEventQueue_enableSensor( sensor_event_queue_, accelerometer_sensor_ );
-        // We'd like to get 60 events per second (in us).
-        ASensorEventQueue_setEventRate( sensor_event_queue_, accelerometer_sensor_,
-                (1000L / 60) * 1000 );
-    }
-}
-
-void Engine::SuspendSensors()
-{
-    // When our app loses focus, we stop monitoring the accelerometer.
-    // This is to avoid consuming battery while not being used.
-    if( accelerometer_sensor_ != NULL )
-    {
-        ASensorEventQueue_disableSensor( sensor_event_queue_, accelerometer_sensor_ );
     }
 }
 
 //-------------------------------------------------------------------------
 //Misc
 //-------------------------------------------------------------------------
-void Engine::SetState( android_app* state )
+void Engine::setState( android_app* state )
 {
     app_ = state;
-    drag_detector_.SetConfiguration( app_->config );
+    dragDetector_.SetConfiguration( app_->config );
 }
 
-bool Engine::IsReady()
+bool Engine::isReady()
 {
-    if( has_focus_ )
+    if( hasFocus_ )
         return true;
 
     return false;
 }
 
-void Engine::TransformPosition( ndk_helper::Vec2& vec )
+void Engine::transformPosition( ndk_helper::Vec2& vec )
 {
     vec = ndk_helper::Vec2( 2.0f, 2.0f ) * vec
-            / ndk_helper::Vec2( gl_context_->GetScreenWidth(), gl_context_->GetScreenHeight() )
+            / ndk_helper::Vec2( glContext_->GetScreenWidth(), glContext_->GetScreenHeight() )
             - ndk_helper::Vec2( 1.f, 1.f );
 }
 
@@ -317,21 +303,18 @@ void android_main( android_app* state )
 {
     app_dummy();
 
-    g_engine.SetState( state );
+    g_engine.setState( state );
 
     //Init helper functions
     ndk_helper::JNIHelper::Init( state->activity, HELPER_CLASS_NAME );
 
     state->userData = &g_engine;
-    state->onAppCmd = Engine::HandleCmd;
-    state->onInputEvent = Engine::HandleInput;
+    state->onAppCmd = Engine::handleCmd;
+    state->onInputEvent = Engine::handleInput;
 
 #ifdef USE_NDK_PROFILER
     monstartup("libgunner.so");
 #endif
-
-    // Prepare to monitor accelerometer
-    //g_engine.InitSensors();
 
     // loop waiting for stuff to do.
     while( 1 )
@@ -344,28 +327,26 @@ void android_main( android_app* state )
         // If not animating, we will block forever waiting for events.
         // If animating, we loop until all events are read, then continue
         // to draw the next frame of animation.
-        while( (id = ALooper_pollAll( g_engine.IsReady() ? 0 : -1, NULL, &events, (void**) &source ))
+        while( (id = ALooper_pollAll( g_engine.isReady() ? 0 : -1, NULL, &events, (void**) &source ))
                 >= 0 )
         {
             // Process this event.
             if( source != NULL )
                 source->process( state, source );
 
-            //g_engine.ProcessSensors( id );
-
             // Check if we are exiting.
             if( state->destroyRequested != 0 )
             {
-                g_engine.TermDisplay();
+                g_engine.termDisplay();
                 return;
             }
         }
 
-        if( g_engine.IsReady() )
+        if( g_engine.isReady() )
         {
             // Drawing is throttled to the screen update rate, so there
             // is no need to do timing here.
-            g_engine.DrawFrame();
+            g_engine.drawFrame();
         }
 
 
