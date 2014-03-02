@@ -176,6 +176,7 @@ void Engine::drawFrame()
 
     if (game_->isOver()) {
         showCenterText(game_->getGameOverText());
+        hasFocus_ = false;
     }
 }
 

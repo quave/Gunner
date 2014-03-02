@@ -21,8 +21,6 @@ public:
 Meteor::Meteor(int width, int height)
     : xFallSpeed_(0.0f)
 {
-    //LOGI("Init meteor");
-
     vertexCount_ = rand() % 6 + 4;
 
     vertices_ = new GLfloat[vertexCount_ * DIMENTIONS];
@@ -37,11 +35,10 @@ Meteor::Meteor(int width, int height)
     }
 
     scale(0.4f, 0.4f * width / height);
-    translate(((float)rand() / RAND_MAX) - 1.0f, 1.0f);
+    float x = ((float)rand() / RAND_MAX) * 2.0f - 1.0f;
+    translate(x, 1.0f);
 
     xFallSpeed_ = -1.0f * copysignf(1.0, x_) * ((float)rand() / RAND_MAX) * 0.01f;
-
-    //LOGI("Init end meteor (%1.4f, %1.4f)", x_, y_);
 }
 
 void Meteor::generate() {

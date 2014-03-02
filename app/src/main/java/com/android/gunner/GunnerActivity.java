@@ -18,6 +18,8 @@ package com.android.gunner;
 
 import android.app.NativeActivity;
 import android.os.Bundle;
+import android.util.AttributeSet;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -33,6 +35,7 @@ public class GunnerActivity extends NativeActivity {
     PopupWindow _popupWindow;
     TextView _labelUpRight;
     TextView _labelCenter;
+    DisplayMetrics _metrics;
 
     @Override
     protected void onCreate(Bundle icicle) {
@@ -45,6 +48,7 @@ public class GunnerActivity extends NativeActivity {
             return;
 
         _activity = this;
+        _metrics = getApplicationContext().getResources().getDisplayMetrics();
 
         this.runOnUiThread(new Runnable()  {
             @Override
@@ -55,16 +59,16 @@ public class GunnerActivity extends NativeActivity {
                 View popupView = layoutInflater.inflate(R.layout.widgets, null);
                 _popupWindow = new PopupWindow(
                         popupView,
-                        LayoutParams.WRAP_CONTENT,
-                        LayoutParams.WRAP_CONTENT);
+                        _metrics.widthPixels,
+                        _metrics.heightPixels / 2);
 
                 LinearLayout mainLayout = new LinearLayout(_activity);
-                MarginLayoutParams params = new MarginLayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-                params.setMargins(0, 0, 0, 0);
+                MarginLayoutParams params = new MarginLayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT);
+                params.setMargins(20, 20, 20, 0);
                 _activity.setContentView(mainLayout, params);
 
                 // Show our UI over NativeActivity window
-                _popupWindow.showAtLocation(mainLayout, Gravity.TOP | Gravity.LEFT, 10, 10);
+                _popupWindow.showAtLocation(mainLayout, Gravity.TOP | Gravity.LEFT, 0, 40);
                 _popupWindow.update();
 
                 _labelUpRight = (TextView)popupView.findViewById(R.id.textViewUpRight);
