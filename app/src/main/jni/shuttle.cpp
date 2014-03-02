@@ -6,15 +6,16 @@
 
 class Shuttle: public Node {
 
-protected:
+    static const float speed = 0.15f;
 
 public:
-    Shuttle(int w, int h);
+    Shuttle();
     NodeType getType() { return SHUTTLE; };
     bool isIntersect(Node* node);
+    float getSpeed() { return speed; }
 };
 
-Shuttle::Shuttle(int width, int height) {
+Shuttle::Shuttle() {
     vertexCount_ = 3;
 
     vertices_ = new GLfloat[vertexCount_ * DIMENTIONS];
@@ -30,8 +31,8 @@ Shuttle::Shuttle(int width, int height) {
         colors_[i + 3] = 1.0;
     }
 
-    scale(0.3f, 0.3f * width / height);
-    translate(0.0f, -0.95f);
+    scale(0.15f, 0.15f);
+    y_ = -0.95f;
 }
 
 bool Shuttle::isIntersect(Node* node) {
@@ -40,8 +41,8 @@ bool Shuttle::isIntersect(Node* node) {
     }
 
     for (int i = 0; i < vertexCount_; ++i) {
-        float x = vertices_[i * 2];
-        float y = vertices_[i * 2 + 1];
+        float x = vertices_[i * 2] + x_;
+        float y = vertices_[i * 2 + 1] + y_;
 
         if (node->isInside(x, y)) {
             return true;

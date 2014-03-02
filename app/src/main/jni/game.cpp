@@ -32,12 +32,12 @@ class Game {
     GLuint gProgram_;
     GLuint gaPositionHandle_;
     GLuint gaColorHandle_;
+    GLuint guVeiwProjHandle_;
 
     GLuint loadShader(GLenum shaderType, const char* pSource);
     GLuint createProgram(const char* pVertexSource, const char* pFragmentSource);
 
-    Mat4 perspective_;
-    Mat4 view_;
+    Mat4 mProj_;
     int width_;
     int height_;
     float smallMeteorX_;
@@ -49,14 +49,10 @@ class Game {
     vector<Node*> scene_;
     vector<int> deleted_;
 
-    static const float fallSpeed = 0.2f;
-    static const float bulletSpeed = 0.7f;
-    static const float shuttleSpeed = 0.3f;
     static const int smallMeteors = 4;
 
     void updateMeteor(double dt, vector<Node*>::iterator nodeIt);
     void updateBullet(double dt, vector<Node*>::iterator nodeIt);
-    void over();
 
 public:
     Game(int w, int h);
@@ -69,12 +65,14 @@ public:
 };
 
 const char gVertexShader[] =
-    "attribute vec4 aPosition;\n"
+    "uniform highp mat4 uViewProj;\n"
+    "attribute vec2 aPosition;\n"
     "attribute vec4 aColor;\n"
     "varying vec4 vColor;\n"
     "void main() {\n"
+    "  highp vec4 p = vec4(aPosition, 0, 1);\n"
     "  vColor = aColor;\n"
-    "  gl_Position = aPosition;\n"
+    "  gl_Position = uViewProj * p;\n"
     "}\n";
 
 const char gFragmentShader[] =
@@ -169,9 +167,19 @@ Game::Game(int w, int h)
     gaColorHandle_ = glGetAttribLocation(gProgram_, "aColor");
     checkGlError("glGetAttribLocation");
     LOGI("glGetAttribLocation(\"gaColorHandle_\") = %d\n", gaColorHandle_);
+    guVeiwProjHandle_ = glGetUniformLocation(gProgram_, "uViewProj");
+    checkGlError("glGetUniformLocation");
+    LOGI("glGetUniformLocation(\"guVeiwProjHandle_\") = %d\n", guVeiwProjHandle_);
 
     glViewport(0, 0, w, h);
     checkGlError("glViewport");
+
+    float aspect = (float) h / (float) w;
+    float ortho[16] = { aspect, 0.0f, 0.0f, 0.0f,
+                        0.0f, 1.0f, 0.0f, 0.0f,
+                        0.0f, 0.0f, 0.0f, 0.0f,
+                        0.0f, 0.0f, 0.0f, 1.0f};
+    mProj_ = Mat4((float*)&ortho);
 
     // Init random generator
     struct timeval now;
@@ -179,17 +187,17 @@ Game::Game(int w, int h)
     srand(now.tv_usec);
 
     // Init scene objects
-    shuttle_ = new Shuttle(width_, height_);
+    shuttle_ = new Shuttle();
     scene_.push_back(shuttle_);
 }
 
 void Game::tap(float x, float y) {
-    Bullet* bullet = new Bullet(width_, height_);
+    Bullet* bullet = new Bullet();
     bullet->translate(shuttle_->getX(), 0.0f);
     scene_.push_back(bullet);
 
     float dx = x - shuttle_->getX();
-    dx = copysignf(1.0, dx) * fmin(shuttleSpeed, abs(dx));
+    dx = copysignf(1.0, dx) * fmin(shuttle_->getSpeed(), abs(dx));
 
     shuttle_->translate(dx, 0.0f);
 }
@@ -210,14 +218,18 @@ void Game::work(double dt) {
 
     // Randomly generate meteors at approximate rate one per second
     if ( ((float)rand() / RAND_MAX) < dt ) {
-        Meteor* meteor = new Meteor(width_, height_);
+        Meteor* meteor = new Meteor();
+        float sky = (float) width_ / (float)height_;
+        float x = ((float)rand() / RAND_MAX) * sky  - sky / 2;
+        meteor->translate(x, 1.0f);
+        meteor->updateXSpeed();
         scene_.push_back(meteor);
     }
 
     // Render scene loop
     for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
         // Let's draw it
-        (*node)->draw(dt, gaPositionHandle_, gaColorHandle_);
+        (*node)->draw(dt, gaPositionHandle_, gaColorHandle_, guVeiwProjHandle_, mProj_);
 
         enum NodeType type = (*node)->getType();
 
@@ -251,7 +263,7 @@ void Game::work(double dt) {
     // And if we hit meteor at (0, 0), well.. than it's a lucky shot
     if (smallMeteorX_ || smallMeteorY_) {
         for (int i = 0; i < smallMeteors; ++i) {
-            SmallMeteor* smallMeteor = new SmallMeteor(width_, height_, smallMeteorX_, smallMeteorY_);
+            SmallMeteor* smallMeteor = new SmallMeteor(smallMeteorX_, smallMeteorY_);
             scene_.push_back(smallMeteor);
         }
         // Clear the spawn flag
@@ -261,26 +273,26 @@ void Game::work(double dt) {
 
 void Game::updateMeteor(double dt, vector<Node*>::iterator nodeIt) {
     Meteor* meteor = (Meteor*) (*nodeIt);
-    // Move meteor at fallSpeed
-    meteor->translate(meteor->getXFallSpeed(), -(dt * fallSpeed));
+    // Move meteor
+    meteor->translate(meteor->getXFallSpeed(), dt * meteor->getYFallSpeed());
     // Make it spin
-    meteor->rotate(0.1f);
-    // Add some random direction
+    meteor->rotate(meteor->getRotateSpeed());
 
     // Mark it for deletion if it's out
     if (meteor->isOut()) {
         deleted_.push_back(nodeIt - scene_.begin());
     }
 
+    // If meteor hit shuttle than the game is over
     if (shuttle_->isIntersect(meteor)) {
-        over();
+        isOver_ = true;
     }
 }
 
 void Game::updateBullet(double dt, vector<Node*>::iterator nodeIt) {
     Bullet* bullet = (Bullet*) (*nodeIt);
     // Move the bullet up
-    bullet->translate(0.0f, dt * bulletSpeed);
+    bullet->translate(0.0f, dt * bullet->getSpeed());
 
     // Mark it for deletion if it's out
     if (bullet->isOut()) {
@@ -310,15 +322,6 @@ void Game::updateBullet(double dt, vector<Node*>::iterator nodeIt) {
             }
         }
     }
-}
-
-void Game::over() {
-    for (vector<Node*>::iterator node = scene_.begin(); node < scene_.end(); ++node) {
-        delete (*node);
-    }
-    scene_.clear();
-
-    isOver_ = true;
 }
 
 string Game::getGameOverText() {

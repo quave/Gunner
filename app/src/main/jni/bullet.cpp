@@ -6,16 +6,16 @@
 
 class Bullet: public Node {
 
-protected:
+    static const float speed = 0.7f;
 
 public:
-    Bullet(int w, int h);
+    Bullet();
     NodeType getType() { return BULLET; };
     bool isIntersect(Node* node);
+    float getSpeed() { return speed; }
 };
 
-Bullet::Bullet(int width, int height) {
-    LOGI("Init bullet");
+Bullet::Bullet() {
     vertexCount_ = 4;
 
     vertices_ = new GLfloat[vertexCount_ * DIMENTIONS];
@@ -33,9 +33,8 @@ Bullet::Bullet(int width, int height) {
         colors_[i + 3] = 1.0;
     }
 
-    scale(0.08f, 0.08f * width / height);
-
-    translate(0.0f, -0.6f);
+    scale(0.04f, 0.04f);
+    y_ = -0.6f;
 }
 
 bool Bullet::isIntersect(Node* node) {
@@ -43,7 +42,7 @@ bool Bullet::isIntersect(Node* node) {
         return false;
     }
 
-    float x = vertices_[0], y = vertices_[1];
+    float x = vertices_[0] + x_, y = vertices_[1] + y_;
     return node->isInside(x, y);
 }
 

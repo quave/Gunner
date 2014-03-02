@@ -29,86 +29,54 @@ protected:
     int vertexCount_;
     float x_;
     float y_;
+    float angle_;
+    virtual void scale(float, float);
 
 public:
     Node():
         vertices_(NULL),
         colors_(NULL),
         vertexCount_(0),
-        x_(0.0f), y_(0.0f) {};
+        x_(0.0f), y_(0.0f),
+        angle_(0.0f) {};
     ~Node();
-    virtual void scale(float, float);
     virtual void translate(float, float);
     virtual void rotate(float);
-    virtual void draw(double dt, GLuint hPos, GLuint hCol);
+    virtual void draw(double dt, GLuint hPos, GLuint hCol, GLuint hVP, Mat4 mVP);
     int getVertexCount() {return vertexCount_;};
     virtual NodeType getType() { return NODE; };
     virtual bool isOut();
     float getX() { return x_; };
     float getY() { return y_; };
 
-    bool isInside(float x, float y);
+    bool isInside(float, float);
 };
 
 void Node::scale(float sx, float sy) {
     if (vertices_ == NULL) { return; }
 
-    float x = x_;
-    float y = y_;
-
-    if (x && y) { translate(-x_, -y_); }
-
     for (int i = 0; i < vertexCount_ * 2; i+=2 ) {
         vertices_[i] *= sx;
         vertices_[i+1] *= sy;
     }
-
-    if (x && y) { translate(x, y); }
 }
 
 void Node::translate(float tx, float ty) {
-    if (vertices_ == NULL) { return; }
-
-    Mat4 trans = Mat4::Translation(tx, ty, 0.0f);
-
-    for (int i = 0; i < vertexCount_ * 2; i+=2 ) {
-        Vec4 vec(vertices_[i], vertices_[i+1], 0.0f, 1.0f);
-        vec = trans * vec;
-        float x, y, dumm;
-        vec.Value(x, y, dumm, dumm);
-        vertices_[i] = x;
-        vertices_[i+1] = y;
-    }
-
     x_ += tx;
     y_ += ty;
 }
 
 void Node::rotate(float angle) {
-    if (vertices_ == NULL) { return; }
-
-    float x = x_;
-    float y = y_;
-
-    if (x && y) { translate(-x_, -y_); }
-
-    Mat4 rot = Mat4::RotationZ(angle);
-
-    for (int i = 0; i < vertexCount_ * 2; i+=2 ) {
-        Vec4 vec(vertices_[i], vertices_[i+1], 0.0f, 1.0f);
-        vec = rot * vec;
-        float x, y, dumm;
-        vec.Value(x, y, dumm, dumm);
-        vertices_[i] = x;
-        vertices_[i+1] = y;
-    }
-
-    if (x && y) { translate(x, y); }
+    angle_ += angle;
 }
 
-void Node::draw(double dt, GLuint hPos, GLuint hCol)
+void Node::draw(double dt, GLuint hPos, GLuint hCol, GLuint hVP, Mat4 mVP)
 {
     if (vertices_ == NULL) { return; }
+
+    Mat4 rot = Mat4::RotationZ(angle_);
+    Mat4 tran = Mat4::Translation(x_, y_, 0.0f);
+    Mat4 transform = mVP * tran * rot;
 
     glVertexAttribPointer(hPos, 2, GL_FLOAT, GL_FALSE, 0, vertices_);
     checkGlError("glVertexAttribPointer");
@@ -119,6 +87,9 @@ void Node::draw(double dt, GLuint hPos, GLuint hCol)
     checkGlError("glVertexAttribPointer");
     glEnableVertexAttribArray(hCol);
     checkGlError("glEnableVertexAttribArray");
+
+    glUniformMatrix4fv(hVP, 1, GL_FALSE, transform.Ptr());
+    checkGlError("glUniformMatrix4fv");
 
     glDrawArrays(GL_LINE_LOOP, 0, vertexCount_);
     checkGlError("glDrawArrays");
@@ -151,8 +122,8 @@ bool Node::isInside(float x, float y) {
     bool result = false;
 
     for (int i = 0, j = vertexCount_ - 1; i < vertexCount_; j = i++) {
-        float curX = vertices_[i * 2], curY = vertices_[i * 2 + 1];
-        float prevX = vertices_[j * 2], prevY = vertices_[j * 2 + 1];
+        float curX = vertices_[i * 2] + x_, curY = vertices_[i * 2 + 1] + y_;
+        float prevX = vertices_[j * 2] + x_, prevY = vertices_[j * 2 + 1] + y_;
 
         if ((curY > y) != (prevY > y) &&
             (x < (prevX - curX) * (y - curY) / (prevY - curY) + curX)) {

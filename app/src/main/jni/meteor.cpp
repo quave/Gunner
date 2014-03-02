@@ -6,45 +6,62 @@
 
 #include "node.cpp"
 
+#define MAX_VERTEX_COUNT 10
+#define MIN_VERTEX_COUNT 4
+
 class Meteor: public Node {
 
     void generate();
     float xFallSpeed_;
+    float yFallSpeed_;
+    float rotateSpeed_;
+    static const float maxFallSpeed = 0.6f;
+    static const float minFallSpeed = 0.3f;
+    static const float maxXSpeed = 0.003f;
+    static const float rotateSpeedRange = 0.2f;
 
 public:
-    Meteor(int w, int h);
+    Meteor();
     NodeType getType() { return METEOR; };
     bool isOut();
     float getXFallSpeed() { return xFallSpeed_; }
+    float getYFallSpeed() { return yFallSpeed_; }
+    float getRotateSpeed() { return rotateSpeed_; }
+    void updateXSpeed();
 };
 
-Meteor::Meteor(int width, int height)
-    : xFallSpeed_(0.0f)
+Meteor::Meteor()
+    : xFallSpeed_(0.0f), yFallSpeed_(0.0f)
 {
-    vertexCount_ = rand() % 6 + 4;
+    vertexCount_ = rand() % (MAX_VERTEX_COUNT - MIN_VERTEX_COUNT) + MIN_VERTEX_COUNT;
 
     vertices_ = new GLfloat[vertexCount_ * DIMENTIONS];
     generate();
 
     colors_ = new GLfloat[vertexCount_ * COLOR_COMPONENTS];
-    for(int i = 0; i < vertexCount_ * COLOR_COMPONENTS; i+=COLOR_COMPONENTS ) {
+    for(int i = 0; i < vertexCount_ * COLOR_COMPONENTS; i += COLOR_COMPONENTS ) {
         colors_[i] = 0.9608f;
         colors_[i + 1] = 0.3608f;
         colors_[i + 2] = 0.8902f;
         colors_[i + 3] = 1.0;
     }
 
-    scale(0.4f, 0.4f * width / height);
-    float x = ((float)rand() / RAND_MAX) * 2.0f - 1.0f;
-    translate(x, 1.0f);
+    scale(0.2f, 0.2f);
 
-    xFallSpeed_ = -1.0f * copysignf(1.0, x_) * ((float)rand() / RAND_MAX) * 0.01f;
+    yFallSpeed_ = -1.0f * ((float)rand() / RAND_MAX * (maxFallSpeed - minFallSpeed) + minFallSpeed);
+    rotateSpeed_ = ((float)rand() / RAND_MAX * rotateSpeedRange * 2 - rotateSpeedRange);
+}
+
+void Meteor::updateXSpeed() {
+    xFallSpeed_ = -1.0f * copysignf(1.0, x_) * ((float)rand() / RAND_MAX) * maxXSpeed;
 }
 
 void Meteor::generate() {
-    if (vertices_ == NULL || vertexCount_ < 4) {
+    if (vertices_ == NULL || vertexCount_ < MIN_VERTEX_COUNT) {
         return;
     }
+
+    /*Random convex hull generation algorithm.*/
 
     // Generate first point
     float r1 = (float)rand() / RAND_MAX / 2 + 0.5f;
@@ -107,8 +124,8 @@ bool Meteor::isOut() {
     float ymax = YMIN;
 
     for (int i = 0; i < vertexCount_; ++i) {
-        float x = vertices_[i * 2];
-        float y = vertices_[i * 2 + 1];
+        float x = vertices_[i * 2] + x_;
+        float y = vertices_[i * 2 + 1] + y_;
 
         if (x < xmin) { xmin = x; }
         if (x > xmax) { xmax = x; }
